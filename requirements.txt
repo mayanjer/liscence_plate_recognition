@@ -1,7 +1,6 @@
 opencv-python-headless
 numpy
-skimage
+scikit-image
 pytesseract
 imutils
 requests
-re
