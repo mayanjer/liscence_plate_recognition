@@ -1,49 +1,52 @@
 import streamlit as st
 import cv2
 import numpy as np
-import tempfile
 import pytesseract
 
-st.title("Video License Plate Recognition 🚗")
+st.title("License Plate Recognition (Video URL) 🚗")
 
-uploaded_video = st.file_uploader("Upload video", type=["mp4", "avi", "mov"])
+video_url = st.text_input("Enter Video URL (mp4 or stream link)")
 
-if uploaded_video is not None:
+if video_url:
 
-    # Save uploaded video temporarily
-    tfile = tempfile.NamedTemporaryFile(delete=False)
-    tfile.write(uploaded_video.read())
+    cap = cv2.VideoCapture(video_url)
 
-    cap = cv2.VideoCapture(tfile.name)
+    if not cap.isOpened():
+        st.error("Cannot open video stream. Check the URL.")
+    else:
+        st.success("Processing video...")
 
-    frame_count = 0
-    results = []
+        frame_count = 0
+        results = []
 
-    stframe = st.empty()
+        frame_placeholder = st.empty()
 
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
 
-        frame_count += 1
+            frame_count += 1
 
-        # Process every nth frame (performance optimization)
-        if frame_count % 10 == 0:
+            # process every 10th frame (performance control)
+            if frame_count % 10 == 0:
 
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            blur = cv2.GaussianBlur(gray, (5, 5), 0)
-            thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                blur = cv2.GaussianBlur(gray, (5, 5), 0)
+                thresh = cv2.threshold(
+                    blur, 0, 255,
+                    cv2.THRESH_BINARY + cv2.THRESH_OTSU
+                )[1]
 
-            text = pytesseract.image_to_string(thresh)
+                text = pytesseract.image_to_string(thresh)
 
-            if text.strip():
-                results.append(text.strip())
+                if text.strip():
+                    results.append(text.strip())
 
-        # Show video frame in Streamlit (optional)
-        stframe.image(frame, channels="BGR")
+            # show live frame in UI
+            frame_placeholder.image(frame, channels="BGR")
 
-    cap.release()
+        cap.release()
 
-    st.subheader("Detected Plates / Text:")
-    st.write(results)
+        st.subheader("Detected Text")
+        st.write(results)
